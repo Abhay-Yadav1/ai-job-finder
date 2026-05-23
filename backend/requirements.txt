@@ -1,0 +1,12 @@
+# TODO: Add version numbers if you want to lock them down
+fastapi
+uvicorn
+langgraph
+langchain-core
+langchain-groq  # Or langchain-openai / langchain-anthropic
+tavily-python
+pymupdf
+python-docx
+python-multipart
+pydantic
+pydantic-settings
