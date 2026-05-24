@@ -10,3 +10,7 @@ python-docx
 python-multipart
 pydantic
 pydantic-settings
+langchain-core
+langchain-groq
+langgraph
+python-dotenv
