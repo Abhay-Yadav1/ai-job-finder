@@ -1,10 +1,10 @@
 import os
-from langchain_core.messages import SystemMessage, HumanMessage
-from tavily import TavilyClient
-from langchain_groq import ChatGroq
+from langchain_core.messages import SystemMessage, HumanMessage # type: ignore
+from tavily import TavilyClient # type: ignore
+from langchain_groq import ChatGroq # type: ignore
 from .state import AgentState
 from .models import ExtractedProfile, JobResults
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
 
 # Load environment variables (TAVILY_API_KEY, GROQ_API_KEY)
 load_dotenv()

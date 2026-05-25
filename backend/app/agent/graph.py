@@ -1,4 +1,4 @@
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END # type: ignore
 from .state import AgentState
 from .nodes import (
     parse_resume_node,
