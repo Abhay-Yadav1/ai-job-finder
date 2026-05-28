@@ -33,29 +33,44 @@ def parse_resume_node(state: AgentState) -> dict:
     return {"parsed_profile": result.model_dump()}
   
 
-def build_query_node(state: AgentState) -> dict:
-    """Builds a highly optimized search query for Tavily."""
-    user_query = state.get("user_query", "")
-    parsed_profile = state.get("parsed_profile", {})
-    filters = state.get("filters", {}) # FIX 1: Extracted the filters from state
     
-    # FIX 2: Added strict instructions to prevent conversational text
-    prompt = f"""You are a job search assistant. Based on the following data, create a concise search query optimized for a job search engine. 
-    Candidate Profile: {parsed_profile}
-    User Query: {user_query}
-    Active Filters: {filters}
-    
-    IMPORTANT: Return ONLY the raw search query string. Do not include quotes, explanations, or any conversational preamble.
-    """
-    response = llm.invoke([SystemMessage(content=prompt)])
-    return {"search_query": response.content.strip()}
     
 
 def web_search_node(state: AgentState) -> dict:
     """Executes the search using Tavily API."""
     query = state["search_query"]
-    response = tavily_client.search(query=query, search_depth="advanced", max_results=10)
+    # FIX: Reduced max_results from 10 to 5 to prevent LLM overload
+    response = tavily_client.search(query=query, search_depth="advanced", max_results=5)
     return {"raw_search_results": response["results"]}
+    
+
+def build_query_node(state: AgentState) -> dict:
+    """Builds a highly optimized search query for Tavily."""
+    user_query = state.get("user_query", "")
+    parsed_profile = state.get("parsed_profile", {})
+    filters = state.get("filters", {})
+    
+    # FIX: Force the LLM to search for "jobs" and stop it from using too many skills
+    prompt = f"""You are an expert recruiter. Create a concise search query to find active job listings on search engines.
+    Candidate Profile: {parsed_profile}
+    User Query: {user_query}
+    Active Filters: {filters}
+    
+    CRITICAL RULES:
+    1. Return ONLY the raw search query string. No quotes, no explanations.
+    2. You MUST include the word "jobs" or "hiring" (e.g., "AI Engineer remote jobs").
+    3. If relying on the Candidate Profile, pick ONLY the top preferred role. DO NOT list all their skills in the query.
+    4. Keep the query under 80 characters.
+    """
+    response = llm.invoke([SystemMessage(content=prompt)])
+    
+    raw_query = response.content.strip().strip('"').strip("'")
+    safe_query = raw_query[:100]
+    
+    # Print it to the backend terminal so you can see what it's searching!
+    print(f"\n[DEBUG] Search Query Built: {safe_query}\n")
+    
+    return {"search_query": safe_query}
     
 
 def parse_results_node(state: AgentState) -> dict:
@@ -63,12 +78,20 @@ def parse_results_node(state: AgentState) -> dict:
     raw_results = str(state["raw_search_results"])
     structured_llm = llm.with_structured_output(JobResults)
     
-    # FIX 3: Removed hardcoded field names. We let Pydantic handle the schema enforcement.
-    prompt = """You are a data extraction assistant. Convert the following raw search results into the required structured job card format.
-    IMPORTANT: Output ONLY pure, valid JSON. Do not include any <function> tags, markdown, or conversational text."""
+    # FIX: Force the LLM to extract MULTIPLE items and prevent summarization
+    prompt = """You are a precise data extraction assistant. I am giving you raw search results from the web.
+    
+    CRITICAL RULES:
+    1. DO NOT summarize the results into a single generic job.
+    2. You MUST extract EACH individual job posting you find into a SEPARATE job card in the list.
+    3. Extract at least 3 to 5 distinct jobs if they exist in the text.
+    4. Use the exact company name from the text. Never use words like "Various" or "Multiple".
+    5. If the salary is missing, explicitly write "Not Disclosed".
+    """
     
     result = structured_llm.invoke([
         SystemMessage(content=prompt), 
         HumanMessage(content=raw_results)
     ])
+    
     return {"final_jobs": result.model_dump()["jobs"]}
