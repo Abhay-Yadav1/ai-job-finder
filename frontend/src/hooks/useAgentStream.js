@@ -11,7 +11,7 @@ export const useAgentStream = () => {
     setJobs([]); 
 
     try {
-      const response = await fetch('http://localhost:8000/api/search-jobs', {
+      const response = await fetch('https://ai-57c422e0521a477b97ec00982094b165.ecs.us-east-1.on.aws/api/search-jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

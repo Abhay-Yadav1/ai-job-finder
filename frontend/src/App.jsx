@@ -22,7 +22,7 @@ function App() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/api/upload-resume", {
+      const response = await fetch("https://ai-57c422e0521a477b97ec00982094b165.ecs.us-east-1.on.aws/api/upload-resume", {
         method: "POST",
         body: formData,
       });

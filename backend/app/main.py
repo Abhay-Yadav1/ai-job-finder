@@ -1,24 +1,28 @@
-# backend/app/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 
 app = FastAPI(title="AI Job Finder API")
 
-# HINT: CORS configuration is crucial for local development.
-# Without this, your React browser app will block the requests to the API.
+# 1. The Standard CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # Vite's default React port
-    allow_credentials=True,
-    allow_methods=["*"], # Allow all methods (POST, GET, OPTIONS, etc.)
-    allow_headers=["*"], # Allow all headers
+    allow_origins=["*"], 
+    allow_credentials=False,
+    allow_methods=["*"], 
+    allow_headers=["*"], 
 )
 
-# Mount the routes we just created in routes.py
+@app.options("/{rest_of_path:path}")
+async def preflight_fallback(rest_of_path: str, response: Response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return {"message": "CORS preflight successful"}
+
+# Mount your actual routes
 app.include_router(router, prefix="/api")
 
-# A simple health check to verify the server is running
 @app.get("/")
 def health_check():
     return {"status": "ok", "message": "AI Job Finder Backend is running!"}
